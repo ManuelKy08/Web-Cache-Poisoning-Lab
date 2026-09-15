@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card hero">
+  <div class="hero-box">
+    <div class="hero-title">Web Cache Poisoning Lab — racun yang disajikan ke semua orang</div>
+    <div class="hero-sub">Cache CDN menyimpan respon dengan <b style="color:var(--purple)">kunci tak lengkap (path saja)</b>, sementara origin merender konten dari input yang <b>bukan bagian dari kunci</b>: header Host / X-Forwarded-Host, query param, dan padding path. Attacker mem-populasi cache dengan versi beracun → <b>semua</b> pengunjung laman termakan. Real case: Web Cache Deception &amp; poisoning klasik (James Kettle, Shopify CDN bugs).</div>
+    <div class="hero-meta">
+      <span class="pill pill-red">Akar: cache-key ≠ semua input origin</span>
+      <span class="pill pill-orange">Vektor: deception (.css), 302/Host, header &amp; param unkeyed</span>
+      <span class="pill pill-green">4 skenario RENTAN/FIXED + endpoint curl</span>
+    </div>
+    <div class="session-row">
+      <span>CDN simulasi: <b class="cyan">cache in-memory (path = kunci)</b></span>
+      <span>Host sah: <b class="green">shop.corp.test</b> · Korban: <b>victim</b></span>
+    </div>
+  </div>
+</div>
+
+{% for s in ['s1','s2','s3','s4'] %}
+{% set m = modes[s] %}
+<div class="card sc-card" id="sc-{{ s }}">
+  <div class="sc-head">
+    <div class="sc-badge s{{ s }}">{{ loop.index }}</div>
+    <div class="sc-info">
+      <div class="sc-title">{{ {'s1':'1️⃣ Web Cache Deception — padding ".css" bocorkan profil privat','s2':'2️⃣ Poison 302 redirect — unkeyed Host (redirect semua visitor)','s3':'3️⃣ Unkeyed X-Forwarded-Host → stored XSS di semua halaman','s4':'4️⃣ Query param unkeyed → refleksi di-cache + stored XSS'}[s] }}</div>
+      <div class="sc-desc">{{ {'s1':'Victim login membuka /profile/victim.css (padding CSS). Origin GENAP menganggap itu laman profil privat + Cache-Control public → masuk cache. Attacker replay path yang sama tanpa login → dapet HTML profil victim yang sempat tersimpan.','s2':'Cache key cuma "/welcome", tapi origin membuat 302 dari header Host. Attacker request dengan X-Forwarded-Host evil.com → 302 ke evil.com tersimpan sebagai /welcome → SEMUA pengunjung dilempar ke phish.','s3':'Origin membangun <script src="//HOST/assets/app.js"> dari X-Forwarded-Host. Attacker siram homepage via header itu → versi beracun di-cache dengan kunci "/" → semua user load skrip attacker (stored XSS berdampak massal).','s4':'Cache key = path "/" saja; origin merefleksikan ?ref=... ke HTML. Attacker cactus homepage sekali dengan payload javascript: → tercache → semua pengunjung dapat XSS.'}[s] }}</div>
+    </div>
+    <button class="toggle {{ 'vuln' if m else 'fixed' }}" data-sc="{{ s }}">
+      <i class="fa-solid {{ 'fa-bomb' if m else 'fa-shield' }}"></i> {{ 'RENTAN' if m else 'FIXED' }}
+    </button>
+  </div>
+  <div class="sc-body">
+    <div class="poc-actions">
+      <button class="btn-run" data-poc="{{ s }}"><i class="fa-solid fa-radiation"></i> Jalankan Exploit</button>
+      <a class="btn-link" href="/run/{{ s }}"><i class="fa-solid fa-wand-magic-sparkles"></i> Buka Langkah Manual</a>
+    </div>
+    <pre class="poc-out" id="out-{{ s }}"><span class="dim">▶ klik "Jalankan Exploit" — jejak tercatat di Logs.</span></pre>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}
